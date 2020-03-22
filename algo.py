@@ -1,7 +1,7 @@
-def get_start_element(A, start, end):
+def get_start_element(A, start, _end):
     return A[start]
 
-def get_last_element(A, start, end):
+def get_last_element(A, _start, end):
     return A[end - 1]
 
 def get_middle_element(A, start, end):
