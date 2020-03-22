@@ -57,14 +57,18 @@ unsorted_arrays = [
     ["one", "two", "three", "four", "five", "six", "seven"]
 ]
 
+sort_algorithms = [
+    quick_sort,
+    lambda A: quick_sort(A, get_last_element),
+    lambda A: quick_sort(A, get_middle_element),
+]
+
 for A in unsorted_arrays:
     B = A.copy()
     print(B)
-    quick_sort(B)
+    sort_algorithms[0](B)
     print(B)
-    C = A.copy()
-    quick_sort(C, get_last_element)
-    assert(B == C)
-    C = A.copy()
-    quick_sort(C, get_middle_element)
-    assert(B == C)
+    for sort_algorithm in sort_algorithms[1:]:
+        C = A.copy()
+        sort_algorithm(C)
+        assert(B == C)
