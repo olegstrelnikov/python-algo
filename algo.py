@@ -1,6 +1,9 @@
 """ Algorithms implementation in Python"""
 
 
+import graphics
+
+
 def get_start_element(array, start, _end):
     """ Select start element of array"""
     return array[start]
@@ -102,4 +105,53 @@ def test_sort():
             assert reverse_sorted_array == sorted_array_alt[::-1]
 
 
+def is_prime_number_brute_force(number):
+    """check whether n is prime"""
+    for divisor in range(2, number):
+        if number % divisor == 0:
+            return False
+    return number > 1
+
+
+def eratosthenes_sieve(up_to):
+    """ Calculates Eratosthenes sieve"""
+    sieve = [True]*(up_to + 1)
+    sieve[0] = sieve[1] = False
+    for k in range(2, len(sieve)):
+        if sieve[k]:
+            for i in range(2*k, len(sieve), k):
+                sieve[i] = False
+    while not sieve[-1]:
+        sieve.pop()
+    return sieve
+
+
+def print_eratosthenes_sieve(up_to, width):
+    """ Prints prime numbers table using Eratosthenes sieve"""
+    sieve = eratosthenes_sieve(up_to)
+    column = 0
+    field_width = len(str(len(sieve))) + 1
+    for k in range(2, len(sieve)):
+        if sieve[k]:
+            column += 1
+            print(k, end=' '*(field_width - len(str(k))) if column % width
+                  else '\n')
+    if column % width:
+        print()
+
+
+def test_primes():
+    """Test prime numbers algorithms"""
+    assert eratosthenes_sieve(97) == eratosthenes_sieve(100)
+    assert eratosthenes_sieve(100) != eratosthenes_sieve(101)
+    print_eratosthenes_sieve(6000, 20)
+    print()
+    sieve = eratosthenes_sieve(1000)
+    for number, is_prime in enumerate(sieve):
+        assert is_prime_number_brute_force(number) == is_prime
+
+
+window = graphics.GraphWin("Test", 300, 300)
+
+test_primes()
 test_sort()
