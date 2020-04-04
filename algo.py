@@ -21,7 +21,7 @@ def get_middle_element(array, start, end):
 
 def quick_sort(array, compare=lambda x, y: x < y, pivot_fn=get_start_element,
                start=0, end=None):
-    """ Quick Sort algorithm implementation """
+    """Quick Sort algorithm implementation"""
     if end is None:
         end = len(array)
     assert start <= end
@@ -66,22 +66,22 @@ def quick_sort(array, compare=lambda x, y: x < y, pivot_fn=get_start_element,
         quick_sort(array, compare, pivot_fn, right + 1, end)
 
 
-def insertion_sort(array, compare):
+def insertion_sort(array, compare=None):
     """Insertion sort"""
 
 
-def choice_sort(array, compare):
+def choice_sort(array, compare=None):
     """Choice sort"""
 
 
-def bubble_sort(array, compare):
+def bubble_sort(array, compare=None):
     """Bubble sort"""
 
 
-def check_sorted(array):
+def check_sorted(array, compare=lambda x, y: x < y):
     """Check if array is sorted"""
     for i in range(len(array) - 1):
-        if not array[i] <= array[i + 1]:
+        if compare(array[i + 1], array[i]):
             return False
     return True
 
@@ -135,28 +135,42 @@ def test_sort():
         quick_sort(A, compare, get_last_element),
         lambda A, compare=lambda x, y: x < y:
         quick_sort(A, compare, get_middle_element),
-        insertion_sort,
-        choice_sort,
-        bubble_sort
+#         insertion_sort,
+#         choice_sort,
+#         bubble_sort
     ]
 
     for unsorted_array in unsorted_arrays:
         sorted_array = unsorted_array.copy()
-        print(sorted_array)
+        print("Unsorted:         ", sorted_array)
         sort_algorithms[0](sorted_array)
-        print(sorted_array)
+        print("Sorted ascending: ", sorted_array)
         reverse_sorted_array = unsorted_array.copy()
         sort_algorithms[0](reverse_sorted_array, lambda x, y: x > y)
-        print(reverse_sorted_array)
-        print()
+        print("Sorted descending:", reverse_sorted_array)
+        print(sort_algorithms[0].__doc__, ":",
+              "passed" if check_sorted(sorted_array) else "failed")
+        print(sort_algorithms[0].__doc__, "reverse :",
+              "passed" if reverse_sorted_array == sorted_array[::-1]
+              else "failed")
+        assert check_sorted(sorted_array)
         assert reverse_sorted_array == sorted_array[::-1]
         for sort_algorithm in sort_algorithms[1:]:
             sorted_array_alt = unsorted_array.copy()
             sort_algorithm(sorted_array_alt)
-            assert sorted_array == sorted_array_alt
             reverse_sorted_array = unsorted_array.copy()
             sort_algorithm(reverse_sorted_array, lambda x, y: x > y)
+            label = sort_algorithm.__doc__
+            if label is None:
+                label = sort_algorithm
+            print(label, ":", "passed" if sorted_array == sorted_array_alt
+                  else "failed")
+            print(label, "reverse :",
+                  "passed" if reverse_sorted_array == sorted_array_alt[::-1]
+                  else "failed")
+            assert sorted_array == sorted_array_alt
             assert reverse_sorted_array == sorted_array_alt[::-1]
+        print()
 
 
 def is_prime_number_brute_force(number):
