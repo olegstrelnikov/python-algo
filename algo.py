@@ -66,16 +66,29 @@ def quick_sort(array, compare=lambda x, y: x < y, pivot_fn=get_start_element,
         quick_sort(array, compare, pivot_fn, right + 1, end)
 
 
-def insertion_sort(array, compare=None):
+def insertion_sort(array, compare=lambda x, y: x < y):
     """Insertion sort"""
+    for top in range(1, len(array)):
+        k = top
+        while k > 0 and compare(array[k], array[k - 1]):
+            array[k], array[k - 1] = array[k - 1], array[k]
+            k -= 1
 
 
-def choice_sort(array, compare=None):
+def choice_sort(array, compare=lambda x, y: x < y):
     """Choice sort"""
+    for pos in range(0, len(array) - 1):
+        for k in range(pos + 1, len(array)):
+            if compare(array[k], array[pos]):
+                array[k], array[pos] = array[pos], array[k]
 
 
-def bubble_sort(array, compare=None):
+def bubble_sort(array, compare=lambda x, y: x < y):
     """Bubble sort"""
+    for bypass in range(1, len(array)):
+        for k in range(0, len(array) - bypass):
+            if compare(array[k + 1], array[k]):
+                array[k + 1], array[k] = array[k], array[k + 1]
 
 
 def check_sorted(array, compare=lambda x, y: x < y):
@@ -135,9 +148,9 @@ def test_sort():
         quick_sort(A, compare, get_last_element),
         lambda A, compare=lambda x, y: x < y:
         quick_sort(A, compare, get_middle_element),
-#         insertion_sort,
-#         choice_sort,
-#         bubble_sort
+        insertion_sort,
+        choice_sort,
+        bubble_sort
     ]
 
     for unsorted_array in unsorted_arrays:
