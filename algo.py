@@ -66,6 +66,57 @@ def quick_sort(array, compare=lambda x, y: x < y, pivot_fn=get_start_element,
         quick_sort(array, compare, pivot_fn, right + 1, end)
 
 
+def insertion_sort(array, compare):
+    """Insertion sort"""
+
+
+def choice_sort(array, compare):
+    """Choice sort"""
+
+
+def bubble_sort(array, compare):
+    """Bubble sort"""
+
+
+def check_sorted(array):
+    """Check if array is sorted"""
+    for i in range(len(array) - 1):
+        if not array[i] <= array[i + 1]:
+            return False
+    return True
+
+
+def test_check_sorted():
+    """ Test check_sorted() function """
+    unsorted_arrays = [
+        [1, 2, 3, 4, 3],
+        [1, 0, 2],
+        [10, 9],
+        [10, 10, 9],
+        [10, 9, 9],
+        ["one", "two", "three", "four", "five", "six", "seven"]
+    ]
+    sorted_arrays = [
+        [1, 2, 3, 4, 5],
+        [1, 1, 2],
+        [1, 2, 2],
+        [10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10],
+        [1, 2, 3, 10, 10, 10, 10, 10, 20, 30, 30],
+        [1000],
+        [],
+        ["five", "four", "one", "seven", "six", "three", "two"],
+        ["a", "aa", "aa", "ab", "b"]
+    ]
+    for unsorted_array in unsorted_arrays:
+        print(unsorted_array, "is", "sorted" if check_sorted(unsorted_array)
+              else "unsorted")
+        assert not check_sorted(unsorted_array)
+    for sorted_array in sorted_arrays:
+        print(sorted_array, "is", "sorted" if check_sorted(sorted_array)
+              else "unsorted")
+        assert check_sorted(sorted_array)
+
+
 def test_sort():
     """Test sort algorithms"""
     unsorted_arrays = [
@@ -84,6 +135,9 @@ def test_sort():
         quick_sort(A, compare, get_last_element),
         lambda A, compare=lambda x, y: x < y:
         quick_sort(A, compare, get_middle_element),
+        insertion_sort,
+        choice_sort,
+        bubble_sort
     ]
 
     for unsorted_array in unsorted_arrays:
@@ -145,7 +199,6 @@ def test_primes():
     assert eratosthenes_sieve(97) == eratosthenes_sieve(100)
     assert eratosthenes_sieve(100) != eratosthenes_sieve(101)
     print_eratosthenes_sieve(6000, 20)
-    print()
     sieve = eratosthenes_sieve(1000)
     for number, is_prime in enumerate(sieve):
         assert is_prime_number_brute_force(number) == is_prime
@@ -154,4 +207,7 @@ def test_primes():
 window = graphics.GraphWin("Test", 300, 300)
 
 test_primes()
+print()
+test_check_sorted()
+print()
 test_sort()
