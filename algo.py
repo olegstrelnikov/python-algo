@@ -270,8 +270,12 @@ def test_primes():
 
 window = graphics.GraphWin("Test", 300, 300)
 
-test_primes()
-print()
-test_check_sorted()
-print()
-test_sort()
+tests = [
+    test_primes,
+    test_check_sorted,
+    test_sort
+]
+
+for test in tests:
+    test()
+    print()
