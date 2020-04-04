@@ -91,6 +91,23 @@ def bubble_sort(array, compare=lambda x, y: x < y):
                 array[k + 1], array[k] = array[k], array[k + 1]
 
 
+def counting_sort(array, order=0):
+    """Counting sort"""
+    frequencies = []
+    for k in array:
+        if k >= len(frequencies):
+            frequencies.extend([0]*(k + 1 - len(frequencies)))
+        frequencies[k] += 1
+    if order == 0:
+        for k, frequency in enumerate(frequencies):
+            array[order:order + frequency] = [k]*frequency
+            order += frequency
+    else:
+        for k, frequency in enumerate(frequencies):
+            array[order:order - frequency:-1] = [k]*frequency
+            order -= frequency
+
+
 def check_sorted(array, compare=lambda x, y: x < y):
     """Check if array is sorted"""
     for i in range(len(array) - 1):
@@ -150,12 +167,16 @@ def test_sort():
         quick_sort(A, compare, get_middle_element),
         insertion_sort,
         choice_sort,
-        bubble_sort
+        bubble_sort,
+    ]
+
+    int_sort_algorithms = [
+        counting_sort
     ]
 
     for unsorted_array in unsorted_arrays:
         sorted_array = unsorted_array.copy()
-        print("Unsorted:         ", sorted_array)
+        print("Unsorted:         ", unsorted_array)
         sort_algorithms[0](sorted_array)
         print("Sorted ascending: ", sorted_array)
         reverse_sorted_array = unsorted_array.copy()
@@ -183,6 +204,22 @@ def test_sort():
                   else "failed")
             assert sorted_array == sorted_array_alt
             assert reverse_sorted_array == sorted_array_alt[::-1]
+        if len(unsorted_array) == 0 or isinstance(unsorted_array[0], int):
+            for sort_algorithm in int_sort_algorithms:
+                sorted_array_alt = unsorted_array.copy()
+                sort_algorithm(sorted_array_alt)
+                reverse_sorted_array = unsorted_array.copy()
+                sort_algorithm(reverse_sorted_array, -1)
+                label = sort_algorithm.__doc__
+                if label is None:
+                    label = sort_algorithm
+                print(label, ":", "passed" if sorted_array == sorted_array_alt
+                      else "failed")
+                print(label, "reverse :", "passed"
+                      if reverse_sorted_array == sorted_array_alt[::-1]
+                      else "failed")
+                assert sorted_array == sorted_array_alt
+                assert reverse_sorted_array == sorted_array_alt[::-1]
         print()
 
 
