@@ -3,7 +3,7 @@
 import random
 import string
 import psycopg2
-
+import ipaddress
 
 def generate_host(length):
     """Generate random host name"""
@@ -11,7 +11,7 @@ def generate_host(length):
                    for _ in range(length))
 
 
-def generate_record(tlds, services, ip_addresses):
+def generate_record(tlds, services, ip_addresses, base):
     """Generate conversations db table record"""
     for tld1 in tlds:
         for tld2 in tlds:
@@ -19,7 +19,9 @@ def generate_record(tlds, services, ip_addresses):
                 for service in services:
                     yield (generate_host(5) + "." + tld1,
                            generate_host(5) + "." + tld2,
-                           ip1, random.randrange(0, ip_addresses),
+                           str(ipaddress.IPv4Address(base + ip1)),
+                           str(ipaddress.IPv4Address(
+                               base + random.randrange(0, ip_addresses))),
                            service, random.uniform(0.0, 1000.0),
                            random.uniform(0.0, 1000.0))
 
@@ -64,13 +66,13 @@ def test_database(host, user, password, database, records):
                 )
     conn.commit()
 
-    ip_addresses = 2**24
+    ip_addresses = 2**24 - 2
     services = ("http", "smb", "cifs", "nfs", "scsi", "voip", "dns",
                 "dns", "https", "ftp", "iscsi", "amazon")
     tlds = ("com", "net", "org", "us", "ru")
 
     assert records <= ip_addresses*len(services)*len(tlds)*len(tlds)
-    gen = generate_record(tlds, services, ip_addresses)
+    gen = generate_record(tlds, services, ip_addresses, 10*2**24 + 1)
     for _ in range(records):
         record = next(gen)
         print(record)
