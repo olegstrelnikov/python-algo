@@ -268,14 +268,16 @@ def test_primes():
         assert is_prime_number_brute_force(number) == is_prime
 
 
-window = graphics.GraphWin("Test", 300, 300)
+WINDOW = graphics.GraphWin("Test", 300, 300)
 
-tests = [
+TESTS = [
     test_primes,
     test_check_sorted,
     test_sort
 ]
 
-for test in tests:
+for test in TESTS:
+    print("-"*20, test.__doc__)
     test()
+    print("-"*40)
     print()
