@@ -75,7 +75,13 @@ def test_database(host, user, password, database, records):
     gen = generate_record(tlds, services, ip_addresses, 10*2**24 + 1)
     for _ in range(records):
         record = next(gen)
-        print(record)
+        cur.execute("""
+            INSERT INTO large_conversations
+            (host_from, host_to, ip_from, ip_to, service, inbound, outbound)
+            VALUES (%s,%s,%s,%s,%s,%s,%s)
+            """, record
+                    )
+    conn.commit()
 
 
 test_database("192.168.1.84", "jtac", "jtac", "large", 50)
