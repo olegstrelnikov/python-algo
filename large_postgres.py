@@ -2,8 +2,10 @@
 
 import random
 import string
-import psycopg2
+import time
 import ipaddress
+import psycopg2.extras
+
 
 def generate_host(length):
     """Generate random host name"""
@@ -11,19 +13,30 @@ def generate_host(length):
                    for _ in range(length))
 
 
-def generate_record(tlds, services, ip_addresses, base):
+def generate_record(tlds, services, ip_addresses, hosts_num, base):
     """Generate conversations db table record"""
+    hosts = [generate_host(5) for _ in range(hosts_num)]
     for tld1 in tlds:
         for tld2 in tlds:
             for ip1 in range(ip_addresses):
                 for service in services:
-                    yield (generate_host(5) + "." + tld1,
-                           generate_host(5) + "." + tld2,
+                    yield (hosts[random.randrange(0, hosts_num)] + "." + tld1,
+                           hosts[random.randrange(0, hosts_num)] + "." + tld2,
                            str(ipaddress.IPv4Address(base + ip1)),
                            str(ipaddress.IPv4Address(
                                base + random.randrange(0, ip_addresses))),
                            service, random.uniform(0.0, 1000.0),
                            random.uniform(0.0, 1000.0))
+
+
+def generate_table(rowcount, record):
+    """Generate rowcount table records"""
+    gen = generate_record(*record)
+    for _ in range(rowcount):
+        try:
+            yield next(gen)
+        except StopIteration:
+            return
 
 
 def test_database(host, user, password, database, records):
@@ -41,10 +54,14 @@ def test_database(host, user, password, database, records):
     conn.close()
     conn = psycopg2.connect(host=host, user=user, password=password,
                             dbname=database)
+    conn.set_isolation_level(
+        psycopg2.extensions.ISOLATION_LEVEL_REPEATABLE_READ)
     cur = conn.cursor()
-    cur.execute("""
+    cur.execute(
+        """
         CREATE EXTENSION IF NOT EXISTS pgcrypto;
-        CREATE TABLE IF NOT EXISTS large_conversations
+        DROP TABLE IF EXISTS {0};
+        CREATE TABLE IF NOT EXISTS {0}
         (
             guid UUID NOT NULL DEFAULT gen_random_uuid(),
             host_from character varying,
@@ -54,17 +71,23 @@ def test_database(host, user, password, database, records):
             service character varying,
             inbound double precision,
             outbound double precision,
-            attrs jsonb,
-            CONSTRAINT pk_conversations PRIMARY KEY(guid),
-            CONSTRAINT uq_converstions UNIQUE
-                (host_from, host_to, ip_from, ip_to, service),
-            CONSTRAINT ck_inbound CHECK(inbound >= 0.0),
-            CONSTRAINT ck_outbound CHECK(outbound >= 0.0)
+            attrs jsonb--,
+            --CONSTRAINT pk_conversations PRIMARY KEY(guid),
+            --CONSTRAINT uq_converstions UNIQUE
+            --    (host_from, host_to, ip_from, ip_to, service),
+            --CONSTRAINT ck_inbound CHECK(inbound >= 0.0),
+            --CONSTRAINT ck_outbound CHECK(outbound >= 0.0)
         );
-        DELETE FROM large_conversations;
-        """
-                )
-    conn.commit()
+        ALTER TABLE {0} SET UNLOGGED;
+        --SET synchronous_commit TO OFF;
+        --SET commit_delay TO 100000;
+        DELETE FROM {0};
+        PREPARE inserter AS
+            INSERT INTO {0}
+            (host_from, host_to, ip_from, ip_to, service, inbound, outbound)
+            VALUES ($1, $2, $3, $4, $5, $6, $7);
+        """.format("large_conversations")
+        )
 
     ip_addresses = 2**24 - 2
     services = ("http", "smb", "cifs", "nfs", "scsi", "voip", "dns",
@@ -72,16 +95,16 @@ def test_database(host, user, password, database, records):
     tlds = ("com", "net", "org", "us", "ru")
 
     assert records <= ip_addresses*len(services)*len(tlds)*len(tlds)
-    gen = generate_record(tlds, services, ip_addresses, 10*2**24 + 1)
-    for _ in range(records):
-        record = next(gen)
-        cur.execute("""
-            INSERT INTO large_conversations
-            (host_from, host_to, ip_from, ip_to, service, inbound, outbound)
-            VALUES (%s,%s,%s,%s,%s,%s,%s)
-            """, record
-                    )
+    gen = generate_table(records,
+                         (tlds, services, ip_addresses, 100, 10*2**24))
+    now = time.monotonic()
+    psycopg2.extras.execute_batch(
+        cur, "EXECUTE inserter (%s, %s, %s, %s, %s, %s, %s);", gen, 10000)
+    cur.execute("DEALLOCATE inserter;")
     conn.commit()
+    print(records, "records inserted --- {:.3} seconds".format(
+        time.monotonic() - now))
 
 
-test_database("192.168.1.84", "jtac", "jtac", "large", 50)
+for power in range(1, 7):
+    test_database("192.168.1.84", "jtac", "jtac", "large", 10**power)
