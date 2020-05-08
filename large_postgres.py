@@ -110,5 +110,5 @@ def test_database(host, user, password, database, records):
         time.monotonic() - now))
 
 
-for power in range(1, 8):
-    test_database("192.168.1.84", "jtac", "jtac", "large", 10**power)
+for records in (1000, 10**4, 10**5, 3200):
+    test_database("192.168.1.84", "jtac", "jtac", "large", records)
