@@ -15,16 +15,20 @@ def generate_host(length):
 
 def generate_record(tlds, services, ip_addresses, hosts_num, base):
     """Generate conversations db table record"""
-    hosts = [generate_host(5) for _ in range(hosts_num)]
+    hosts = [
+        (generate_host(5) + ".",
+         generate_host(5) + ".",
+         str(ipaddress.IPv4Address(
+            base + random.randrange(0, ip_addresses))),
+         services[i % len(services)],
+         ) for i in range(hosts_num//2)]
+
     for tld1 in tlds:
         for tld2 in tlds:
             for ip1 in range(ip_addresses):
-                for service in services:
-                    yield (hosts[random.randrange(0, hosts_num)] + "." + tld1,
-                           hosts[random.randrange(0, hosts_num)] + "." + tld2,
-                           str(ipaddress.IPv4Address(base + ip1)),
-                           str(ipaddress.IPv4Address(
-                               base + random.randrange(0, ip_addresses))),
+                str_ip1 = str(ipaddress.IPv4Address(base + ip1))
+                for host1, host2, ip2, service in hosts:
+                    yield (host1 + tld1, host2 + tld2, str_ip1, ip2,
                            service, random.uniform(0.0, 1000.0),
                            random.uniform(0.0, 1000.0))
 
@@ -96,7 +100,7 @@ def test_database(host, user, password, database, records):
 
     assert records <= ip_addresses*len(services)*len(tlds)*len(tlds)
     gen = generate_table(records,
-                         (tlds, services, ip_addresses, 100, 10*2**24))
+                         (tlds, services, ip_addresses, 100, 10*2**24 + 1))
     now = time.monotonic()
     psycopg2.extras.execute_batch(
         cur, "EXECUTE inserter (%s, %s, %s, %s, %s, %s, %s);", gen, 10000)
@@ -106,5 +110,5 @@ def test_database(host, user, password, database, records):
         time.monotonic() - now))
 
 
-for power in range(1, 7):
+for power in range(1, 8):
     test_database("192.168.1.84", "jtac", "jtac", "large", 10**power)
