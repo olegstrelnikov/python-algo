@@ -108,5 +108,5 @@ def test_database(host, user, password, database, records):
         time.monotonic() - now))
 
 
-for rec in (1000, 10**4, 10**5, 3200):
+for rec in (1000, 10**4, 10**5, 10**6, 10**7, 10**8):
     test_database("192.168.8.180", "test", "test", "large", rec)
