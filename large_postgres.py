@@ -45,8 +45,7 @@ def generate_table(rowcount, record):
 
 def test_database(host, user, password, database, records):
     """Fills in database table and executes aggregate query on it"""
-    conn = psycopg2.connect("host='{}' user='{}' password='{}'"
-                            .format(host, user, password))
+    conn = psycopg2.connect(host=host, user=user, password=password, dbname="postgres")
     cur = conn.cursor()
     cur.execute("SELECT 1 FROM pg_database WHERE datname=%s", (database,))
     if cur.rowcount == 0:
@@ -56,8 +55,7 @@ def test_database(host, user, password, database, records):
         cur.execute("CREATE DATABASE {}".format(database))
         conn.set_isolation_level(isolation_level)
     conn.close()
-    conn = psycopg2.connect(host=host, user=user, password=password,
-                            dbname=database)
+    conn = psycopg2.connect(host=host, user=user, password=password, dbname=database)
     conn.set_isolation_level(
         psycopg2.extensions.ISOLATION_LEVEL_REPEATABLE_READ)
     cur = conn.cursor()
@@ -110,5 +108,5 @@ def test_database(host, user, password, database, records):
         time.monotonic() - now))
 
 
-for records in (1000, 10**4, 10**5, 3200):
-    test_database("192.168.1.84", "jtac", "jtac", "large", records)
+for rec in (1000, 10**4, 10**5, 3200):
+    test_database("192.168.8.180", "test", "test", "large", rec)
