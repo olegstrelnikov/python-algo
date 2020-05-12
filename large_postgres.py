@@ -15,16 +15,17 @@ def generate_host(length):
 
 def generate_record(tlds, services, ip_addresses, hosts_num, base):
     """Generate conversations db table record"""
+    tlds_num = len(tlds)
     hosts = [
-        (generate_host(5) + ".",
-         generate_host(5) + ".",
+        (tlds_num*(1 + 2*i),
+         tlds_num*(2 + 2*i),
          str(ipaddress.IPv4Address(
             base + random.randrange(0, ip_addresses))),
-         services[i % len(services)],
+         1 + (i % len(services)),
          ) for i in range(hosts_num//2)]
 
-    for tld1 in tlds:
-        for tld2 in tlds:
+    for tld1 in range(tlds_num):
+        for tld2 in range(tlds_num):
             for ip1 in range(ip_addresses):
                 str_ip1 = str(ipaddress.IPv4Address(base + ip1))
                 for host1, host2, ip2, service in hosts:
@@ -65,15 +66,15 @@ def test_database(host, user, password, database, records):
         DROP TABLE IF EXISTS {0};
         CREATE TABLE IF NOT EXISTS {0}
         (
-            guid UUID NOT NULL DEFAULT gen_random_uuid(),
-            host_from character varying,
-            host_to character varying,
+            --guid UUID NOT NULL DEFAULT gen_random_uuid(),
+            host_from bigint,
+            host_to bigint,
             ip_from inet,
             ip_to inet,
-            service character varying,
+            service bigint,
             inbound double precision,
-            outbound double precision,
-            attrs jsonb--,
+            outbound double precision--,
+            --attrs jsonb--,
             --CONSTRAINT pk_conversations PRIMARY KEY(guid),
             --CONSTRAINT uq_converstions UNIQUE
             --    (host_from, host_to, ip_from, ip_to, service),
