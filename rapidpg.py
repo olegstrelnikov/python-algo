@@ -186,7 +186,8 @@ class RapidPgResult:
 class RapidPgConnection:
     """ Wrapper of PGconn* """
 
-    RAPID_PG_BINARY = ctypes.POINTER(ctypes.c_int).in_dll(libpq, 'RAPID_PG_BINARY')
+    RAPID_PG_BINARY = ctypes.POINTER(ctypes.c_int).in_dll(libpq,
+                                                          'RAPID_PG_BINARY')
 
     def __init__(self, conn_params):
         keys = (ctypes.c_char_p * (len(conn_params) + 1))()
@@ -220,10 +221,12 @@ class RapidPgConnection:
 
     def exec_prepared(self, statement, parameters):
         """ execute prepared statement """
-        return RapidPgResult(libpq.PQexecPrepared(self.pg_conn,
-                                                  statement.encode('utf-8'),
-                                                  parameters.size,
-                                                  parameters.pointers,
-                                                  parameters.lengths,
-                                                  RapidPgConnection.RAPID_PG_BINARY, 
-                                                  1), statement)
+        contents = parameters.parameters.contents
+        return RapidPgResult(libpq.PQexecPrepared(
+            self.pg_conn,
+            statement.encode('utf-8'),
+            contents.size,
+            contents.pointers,
+            contents.lengths,
+            RapidPgConnection.RAPID_PG_BINARY,
+            1), statement)
