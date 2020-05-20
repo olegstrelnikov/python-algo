@@ -6,7 +6,7 @@ from enum import IntEnum
 librapidpg = ctypes.CDLL('./librapidpg.so')
 
 
-class RapidPgParametersWrapper(ctypes.Structure):
+class ParametersWrapper(ctypes.Structure):
     """ pg parameters wrapper """
     _fields_ = [('lengths', ctypes.POINTER(ctypes.c_int)),
                 ('pointers', ctypes.POINTER(ctypes.c_char_p)),
@@ -19,31 +19,31 @@ class RapidPgParametersWrapper(ctypes.Structure):
 
 
 librapidpg.rapidpg_create_parameters.restype = ctypes.POINTER(
-    RapidPgParametersWrapper)
+    ParametersWrapper)
 librapidpg.rapidpg_create_parameters.argtypes = []
 
 librapidpg.rapidpg_set_current.restype = ctypes.c_int
-librapidpg.rapidpg_set_current.argtypes = [ctypes.POINTER(RapidPgParametersWrapper),
+librapidpg.rapidpg_set_current.argtypes = [ctypes.POINTER(ParametersWrapper),
                                            ctypes.c_size_t]
 
 librapidpg.rapidpg_add_int.restype = ctypes.c_int
-librapidpg.rapidpg_add_int.argtypes = [ctypes.POINTER(RapidPgParametersWrapper),
+librapidpg.rapidpg_add_int.argtypes = [ctypes.POINTER(ParametersWrapper),
                                        ctypes.c_longlong]
 
 librapidpg.rapidpg_add_double.restype = ctypes.c_int
-librapidpg.rapidpg_add_double.argtypes = [ctypes.POINTER(RapidPgParametersWrapper),
+librapidpg.rapidpg_add_double.argtypes = [ctypes.POINTER(ParametersWrapper),
                                           ctypes.c_double]
 
 librapidpg.rapidpg_add_ip4_hbo.restype = ctypes.c_int
-librapidpg.rapidpg_add_ip4_hbo.argtypes = [ctypes.POINTER(RapidPgParametersWrapper),
+librapidpg.rapidpg_add_ip4_hbo.argtypes = [ctypes.POINTER(ParametersWrapper),
                                            ctypes.c_uint]
 
 librapidpg.rapidpg_destroy_parameters.restype = None
 librapidpg.rapidpg_destroy_parameters.argtypes = [
-    ctypes.POINTER(RapidPgParametersWrapper)]
+    ctypes.POINTER(ParametersWrapper)]
 
 
-class RapidPgParameters:
+class Parameters:
     """ pg parameters encapsulation """
     def __init__(self):
         self.parameters = librapidpg.rapidpg_create_parameters()
@@ -158,7 +158,7 @@ libpq.PQresultErrorMessage.restype = ctypes.c_char_p
 libpq.PQresultErrorMessage.argtypes = [ctypes.c_void_p]
 
 
-class RapidPgResult:
+class Result:
     """ Wrapper of PGresult* """
 
     def __init__(self, result, sql):
@@ -183,7 +183,7 @@ class RapidPgResult:
         return libpq.PQresultErrorMessage(self.pg_result).decode('utf-8')
 
 
-class RapidPgConnection:
+class Connection:
     """ Wrapper of PGconn* """
 
     RAPID_PG_BINARY = ctypes.POINTER(ctypes.c_int).in_dll(libpq,
@@ -216,17 +216,16 @@ class RapidPgConnection:
 
     def exec(self, sql):
         """ execute sql w/o parameters """
-        return RapidPgResult(libpq.PQexec(self.pg_conn,
-                                          sql.encode('utf-8')), sql)
+        return Result(libpq.PQexec(self.pg_conn, sql.encode('utf-8')), sql)
 
     def exec_prepared(self, statement, parameters):
         """ execute prepared statement """
         contents = parameters.parameters.contents
-        return RapidPgResult(libpq.PQexecPrepared(
+        return Result(libpq.PQexecPrepared(
             self.pg_conn,
             statement.encode('utf-8'),
             contents.size,
             contents.pointers,
             contents.lengths,
-            RapidPgConnection.RAPID_PG_BINARY,
+            Connection.RAPID_PG_BINARY,
             1), statement)
