@@ -157,17 +157,26 @@ class Connection:
 
         CONNECTION_STARTED = 2              # Waiting for connection to be made
         CONNECTION_MADE = 3                 # Connection OK; waiting to send.
-        CONNECTION_AWAITING_RESPONSE = 4    # Waiting for a response from the
-                                            # postmaster.
-        CONNECTION_AUTH_OK = 5              # Received authentication; waiting for
-                                            # backend startup.
+
+        # Waiting for a response from the
+        # postmaster.
+        CONNECTION_AWAITING_RESPONSE = 4
+
+        # Received authentication; waiting for
+        # backend startup.
+        CONNECTION_AUTH_OK = 5
+
         CONNECTION_SETENV = 6               # Negotiating environment.
         CONNECTION_SSL_STARTUP = 7          # Negotiating SSL.
         CONNECTION_NEEDED = 8               # Internal state: connect() needed
-        CONNECTION_CHECK_WRITABLE = 9       # Check if we could make a writable
-                                            # connection.
-        CONNECTION_CONSUME = 10             # Wait for any pending message and
-                                            # consume them.
+
+        # Check if we could make a writable
+        # connection.
+        CONNECTION_CHECK_WRITABLE = 9
+
+        # Wait for any pending message and
+        # consume them.
+        CONNECTION_CONSUME = 10
 
     Result.libpq.PQstatus.restype = ConnStatusType
     Result.libpq.PQstatus.argtypes = [ctypes.c_void_p]
