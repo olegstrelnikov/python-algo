@@ -7,7 +7,7 @@ from enum import IntEnum
 class Parameters:
     """ pg parameters encapsulation """
 
-    class Wrapper(ctypes.Structure):
+    class Wrapper(ctypes.Structure):  # pylint: disable=too-few-public-methods
         """ pg parameters wrapper """
         _fields_ = [('lengths', ctypes.POINTER(ctypes.c_int)),
                     ('pointers', ctypes.POINTER(ctypes.c_char_p)),
@@ -130,7 +130,7 @@ class Result:
     def status(self):
         """ whether result is ok """
         return Result.libpq.PQresultStatus(
-            self.pg_result) == ExecStatusType.PGRES_COMMAND_OK
+            self.pg_result) == Result.ExecStatusType.PGRES_COMMAND_OK
 
     def error_message(self):
         """ get result error message"""
@@ -223,7 +223,7 @@ class Connection:
     def status(self):
         """ Whether connection status is ok """
         return Result.libpq.PQstatus(
-            self.pg_conn) == ConnStatusType.CONNECTION_OK
+            self.pg_conn) == Connection.ConnStatusType.CONNECTION_OK
 
     def error_message(self):
         """ Get connection error message """
