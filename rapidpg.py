@@ -3,69 +3,67 @@
 import ctypes
 from enum import IntEnum
 
-librapidpg = ctypes.CDLL('./librapidpg.so')
-
-
-class ParametersWrapper(ctypes.Structure):
-    """ pg parameters wrapper """
-    _fields_ = [('lengths', ctypes.POINTER(ctypes.c_int)),
-                ('pointers', ctypes.POINTER(ctypes.c_char_p)),
-                ('values', ctypes.c_char_p),
-                ('size', ctypes.c_size_t),
-                ('current', ctypes.c_size_t),
-                ('capacity', ctypes.c_size_t),
-                ('length', ctypes.c_size_t)
-                ]
-
-
-librapidpg.rapidpg_create_parameters.restype = ctypes.POINTER(
-    ParametersWrapper)
-librapidpg.rapidpg_create_parameters.argtypes = []
-
-librapidpg.rapidpg_set_current.restype = ctypes.c_int
-librapidpg.rapidpg_set_current.argtypes = [ctypes.POINTER(ParametersWrapper),
-                                           ctypes.c_size_t]
-
-librapidpg.rapidpg_add_int.restype = ctypes.c_int
-librapidpg.rapidpg_add_int.argtypes = [ctypes.POINTER(ParametersWrapper),
-                                       ctypes.c_longlong]
-
-librapidpg.rapidpg_add_double.restype = ctypes.c_int
-librapidpg.rapidpg_add_double.argtypes = [ctypes.POINTER(ParametersWrapper),
-                                          ctypes.c_double]
-
-librapidpg.rapidpg_add_ip4_hbo.restype = ctypes.c_int
-librapidpg.rapidpg_add_ip4_hbo.argtypes = [ctypes.POINTER(ParametersWrapper),
-                                           ctypes.c_uint]
-
-librapidpg.rapidpg_destroy_parameters.restype = None
-librapidpg.rapidpg_destroy_parameters.argtypes = [
-    ctypes.POINTER(ParametersWrapper)]
-
 
 class Parameters:
     """ pg parameters encapsulation """
+
+    class Wrapper(ctypes.Structure):
+        """ pg parameters wrapper """
+        _fields_ = [('lengths', ctypes.POINTER(ctypes.c_int)),
+                    ('pointers', ctypes.POINTER(ctypes.c_char_p)),
+                    ('values', ctypes.c_char_p),
+                    ('size', ctypes.c_size_t),
+                    ('current', ctypes.c_size_t),
+                    ('capacity', ctypes.c_size_t),
+                    ('length', ctypes.c_size_t)
+                    ]
+
+    librapidpg = ctypes.CDLL('./librapidpg.so')
+
+    librapidpg.rapidpg_create_parameters.restype = ctypes.POINTER(
+        Wrapper)
+    librapidpg.rapidpg_create_parameters.argtypes = []
+
+    librapidpg.rapidpg_set_current.restype = ctypes.c_int
+    librapidpg.rapidpg_set_current.argtypes = [ctypes.POINTER(Wrapper),
+                                               ctypes.c_size_t]
+
+    librapidpg.rapidpg_add_int.restype = ctypes.c_int
+    librapidpg.rapidpg_add_int.argtypes = [ctypes.POINTER(Wrapper),
+                                           ctypes.c_longlong]
+
+    librapidpg.rapidpg_add_double.restype = ctypes.c_int
+    librapidpg.rapidpg_add_double.argtypes = [ctypes.POINTER(Wrapper),
+                                              ctypes.c_double]
+
+    librapidpg.rapidpg_add_ip4_hbo.restype = ctypes.c_int
+    librapidpg.rapidpg_add_ip4_hbo.argtypes = [ctypes.POINTER(Wrapper),
+                                               ctypes.c_uint]
+
+    librapidpg.rapidpg_destroy_parameters.restype = None
+    librapidpg.rapidpg_destroy_parameters.argtypes = [ctypes.POINTER(Wrapper)]
+
     def __init__(self):
-        self.parameters = librapidpg.rapidpg_create_parameters()
+        self.parameters = Parameters.librapidpg.rapidpg_create_parameters()
 
     def __del__(self):
-        librapidpg.rapidpg_destroy_parameters(self.parameters)
+        Parameters.librapidpg.rapidpg_destroy_parameters(self.parameters)
 
     def set_current(self):
         """ set current parameter """
-        librapidpg.rapidpg_set_current(self.parameters)
+        Parameters.librapidpg.rapidpg_set_current(self.parameters)
 
     def add_int(self):
         """ add int """
-        librapidpg.rapidpg_add_int(self.parameters)
+        Parameters.librapidpg.rapidpg_add_int(self.parameters)
 
     def add_double(self):
         """ add double """
-        librapidpg.rapidpg_add_double(self.parameters)
+        Parameters.librapidpg.rapidpg_add_double(self.parameters)
 
     def add_ip4_hbo(self):
         """ add IPv4 address """
-        librapidpg.rapidpg_add_ip4_hbo(self.parameters)
+        Parameters.librapidpg.rapidpg_add_ip4_hbo(self.parameters)
 
 
 libpq = ctypes.CDLL('libpq.so')
@@ -81,17 +79,26 @@ class CtypesEnum(IntEnum):
 
 class ExecStatusType(CtypesEnum):
     """ enum ExecStatusType """
+
     PGRES_EMPTY_QUERY = 0       # empty query string was executed
-    PGRES_COMMAND_OK = 1        # a query command that doesn't return
-                                # anything was executed properly by the
-                                # backend 
-    PGRES_TUPLES_OK = 2         # a query command that returns tuples was
-                                # executed properly by the backend PGresult
-                                # contains the result tuples
+
+    # a query command that doesn't return
+    # anything was executed properly by the
+    # backend
+    PGRES_COMMAND_OK = 1
+
+    # a query command that returns tuples was
+    # executed properly by the backend PGresult
+    # contains the result tuples
+    PGRES_TUPLES_OK = 2
+
     PGRES_COPY_OUT = 3          # Copy Out data transfer in progress
     PGRES_COPY_IN = 4           # Copy In data transfer in progress
-    PGRES_BAD_RESPONSE = 5      # an unexpected response was recv'd from the
-                                # backend
+
+    # an unexpected response was recv'd from the
+    # backend
+    PGRES_BAD_RESPONSE = 5
+
     PGRES_NONFATAL_ERROR = 6    # notice or warning message
     PGRES_FATAL_ERROR = 7       # query failed
     PGRES_COPY_BOTH = 8         # Copy In/Out data transfer in progress
