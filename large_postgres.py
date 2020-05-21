@@ -4,7 +4,7 @@ import random
 import string
 import time
 import ipaddress
-import psycopg2
+import rapidpg
 
 
 def generate_host(length):
@@ -71,29 +71,30 @@ def generate_table(rowcount, record):
 
 def generate_insert_values(records, columns):
     """Generate SQL script"""
-    return ",".join("(" + ",".join("$"+str(i) for i in range(j*columns + 1, j*columns + columns + 1)) + ")" for j in range(records))
+    return ",".join("(" + ",".join("$"+str(i) for i in range(
+        j*columns + 1, j*columns + columns + 1)) + ")" for j in range(records))
 
 
 def test_database(host, user, password, database, records):
     """Fills in database table and executes aggregate query on it"""
-    conn = psycopg2.connect(host=host, user=user,
-                            password=password, dbname="postgres")
-    cur = conn.cursor()
-    cur.execute("SELECT 1 FROM pg_database WHERE datname=%s", (database,))
-    if cur.rowcount == 0:
-        isolation_level = conn.isolation_level
-        conn.set_isolation_level(
-            psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
-        cur.execute("CREATE DATABASE {}".format(database))
-        conn.set_isolation_level(isolation_level)
-    conn.close()
-    conn = psycopg2.connect(host=host, user=user,
-                            password=password, dbname=database)
-    conn.set_isolation_level(
-        psycopg2.extensions.ISOLATION_LEVEL_REPEATABLE_READ)
-    cur = conn.cursor()
+    conn = rapidpg.Connection({"hostaddr": host, "user": user,
+                               "password": password, "dbname": "postgres"})
+    assert conn.is_connected()
+    assert conn.status()
+    res = conn.execute("SELECT 1 FROM pg_database WHERE datname='{}'"
+                       .format(database))
+    assert res.has_result()
+    assert res.status() == rapidpg.Result.ExecStatusType.PGRES_TUPLES_OK
+    if res.rowcount() == 0:
+        res = conn.execute("CREATE DATABASE {}".format(database))
+        assert res.has_result()
+        assert res.status() == rapidpg.Result.ExecStatusType.PGRES_COMMAND_OK
+    conn = rapidpg.Connection({"hostaddr": host, "user": user,
+                               "password": password, "dbname": database})
+    assert conn.is_connected()
+    assert conn.status()
     records_at_once = 65536 // 7
-    cur.execute((
+    res = conn.execute((
         """
         CREATE EXTENSION IF NOT EXISTS pgcrypto;
         DROP TABLE IF EXISTS {0};
@@ -126,6 +127,9 @@ def test_database(host, user, password, database, records):
         .format("large_conversations")
         )
 
+    assert res.has_result()
+    assert res.status() == rapidpg.Result.ExecStatusType.PGRES_COMMAND_OK
+
     ip_addresses = 2**24 - 2
     services = ("http", "smb", "cifs", "nfs", "scsi", "voip", "dns",
                 "dns", "https", "ftp", "iscsi", "amazon")
@@ -135,29 +139,30 @@ def test_database(host, user, password, database, records):
     gen = generate_values(tlds, services, ip_addresses, 100, 10*2**24 + 1)
     now = time.monotonic()
     for _ in range(records // records_at_once):
-        cur.execute("EXECUTE inserter (" +
-                    "%s, "*(7*records_at_once - 1) + "%s);",
-                    [next(gen) for _ in range(7*records_at_once)])
+        res = conn.exec_prepared("EXECUTE inserter (" +
+                                 "%s, "*(7*records_at_once - 1) + "%s);",
+                                 [next(gen) for _ in range(7*records_at_once)])
     records_at_once = records % records_at_once
     if records_at_once > 0:
-        cur.execute((
+        res = conn.execute((
             """
             DEALLOCATE inserter;
             PREPARE inserter AS
-                INSERT INTO {0}
-                (host_from, host_to, ip_from, ip_to, service, inbound, outbound)
-                VALUES
+              INSERT INTO {0}
+              (host_from, host_to, ip_from, ip_to, service, inbound, outbound)
+              VALUES
             """ + generate_insert_values(records_at_once, 7) + ";")
             .format("large_conversations")
             )
-        cur.execute("EXECUTE inserter (" +
-                    "%s, "*(7*records_at_once - 1) + "%s);",
-                    [next(gen) for _ in range(7*records_at_once)])
-    cur.execute("DEALLOCATE inserter;")
-    conn.commit()
+        assert res.has_result()
+        assert res.status() == rapidpg.Result.ExecStatusType.PGRES_COMMAND_OK
+        res = conn.exec_prepared("EXECUTE inserter (" +
+                                 "%s, "*(7*records_at_once - 1) + "%s);",
+                                 [next(gen) for _ in range(7*records_at_once)])
+    res = conn.execute("DEALLOCATE inserter;")
     print(records, "records inserted --- {:.3} seconds".format(
         time.monotonic() - now))
 
 
-for rec in (1000, 10**4, 10**5, 10**6, 10**7, 10**8):
+for rec in (100, 1000, 10**4, 10**5, 10**6, 10**7, 10**8):
     test_database("192.168.8.180", "test", "test", "large", rec)
