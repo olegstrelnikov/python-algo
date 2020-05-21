@@ -109,6 +109,9 @@ class Result:
     libpq.PQresultStatus.restype = ExecStatusType
     libpq.PQresultStatus.argtypes = [ctypes.c_void_p]
 
+    libpq.PQntuples.restype = ctypes.c_int
+    libpq.PQntuples.argtypes = [ctypes.c_void_p]
+
     libpq.PQclear.restype = None
     libpq.PQclear.argtypes = [ctypes.c_void_p]
 
@@ -130,6 +133,10 @@ class Result:
     def status(self):
         """ whether result is ok """
         return Result.libpq.PQresultStatus(self.pg_result)
+
+    def rowcount(self):
+        """ Whether connection status is ok """
+        return Result.libpq.PQntuples(self.pg_result)
 
     def error_message(self):
         """ get result error message"""
@@ -206,9 +213,9 @@ class Connection:
         keys = (ctypes.c_char_p * (len(conn_params)+1))()
         values = (ctypes.c_char_p * (len(conn_params)+1))()
         keys[:] = [key.encode('utf-8') for key in list(conn_params)
-                ] + [ctypes.c_char_p()]
+                   ] + [ctypes.c_char_p()]
         values[:] = [key.encode('utf-8') for key in list(conn_params.values())
-                  ] + [ctypes.c_char_p()]
+                     ] + [ctypes.c_char_p()]
         self.pg_conn = Result.libpq.PQconnectdbParams(keys, values, 0)
 
     def __del__(self):
