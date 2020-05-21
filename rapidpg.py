@@ -129,8 +129,7 @@ class Result:
 
     def status(self):
         """ whether result is ok """
-        return Result.libpq.PQresultStatus(
-            self.pg_result) == Result.ExecStatusType.PGRES_COMMAND_OK
+        return Result.libpq.PQresultStatus(self.pg_result)
 
     def error_message(self):
         """ get result error message"""
@@ -204,9 +203,11 @@ class Connection:
         ctypes.c_int]
 
     def __init__(self, conn_params):
-        keys = [key.encode('utf-8') for key in list(conn_params)
+        keys = (ctypes.c_char_p * (len(conn_params)+1))()
+        values = (ctypes.c_char_p * (len(conn_params)+1))()
+        keys[:] = [key.encode('utf-8') for key in list(conn_params)
                 ] + [ctypes.c_char_p()]
-        values = [key.encode('utf-8') for key in list(conn_params.values())
+        values[:] = [key.encode('utf-8') for key in list(conn_params.values())
                   ] + [ctypes.c_char_p()]
         self.pg_conn = Result.libpq.PQconnectdbParams(keys, values, 0)
 
