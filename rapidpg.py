@@ -141,8 +141,8 @@ class Result:
 class Connection:
     """ Wrapper of PGconn* """
 
-    RAPID_PG_BINARY = ctypes.POINTER(ctypes.c_int).in_dll(Result.libpq,
-                                                          'RAPID_PG_BINARY')
+    RAPID_PG_BINARY = ctypes.POINTER(ctypes.c_int).in_dll(
+        Parameters.librapidpg, 'RAPID_PG_BINARY')
 
     class ConnStatusType(CtypesEnum):
         """ enum ConnStatusType """
@@ -204,12 +204,10 @@ class Connection:
         ctypes.c_int]
 
     def __init__(self, conn_params):
-        keys = (ctypes.c_char_p * (len(conn_params) + 1))()
-        values = (ctypes.c_char_p * (len(conn_params) + 1))()
-        keys[:-1] = conn_params.keys()
-        values[:-1] = conn_params.values()
-        keys[len(conn_params)] = None
-        values[len(conn_params)] = None
+        keys = [key.encode('utf-8') for key in list(conn_params)
+                ] + [ctypes.c_char_p()]
+        values = [key.encode('utf-8') for key in list(conn_params.values())
+                  ] + [ctypes.c_char_p()]
         self.pg_conn = Result.libpq.PQconnectdbParams(keys, values, 0)
 
     def __del__(self):
@@ -229,7 +227,7 @@ class Connection:
         """ Get connection error message """
         return Result.libpq.PQerrorMessage(self.pg_conn).decode('utf-8')
 
-    def exec(self, sql):
+    def execute(self, sql):
         """ execute sql w/o parameters """
         return Result(Result.libpq.PQexec(self.pg_conn, sql.encode('utf-8')),
                       sql)
