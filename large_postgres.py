@@ -39,7 +39,6 @@ HOSTS = [
 
 def fill_in_parameters(parameters, i, to_i):
     """ fill in inserter parameters """
-    print(i, to_i, sep='-')
     parameters.set_current(0)
     while i < to_i:
         host = i % (host_num // 2)
