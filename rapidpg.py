@@ -147,8 +147,8 @@ class Result:
 class Connection:
     """ Wrapper of PGconn* """
 
-    RAPID_PG_BINARY = ctypes.POINTER(ctypes.c_int).in_dll(
-        Parameters.librapidpg, 'RAPID_PG_BINARY')
+    RAPID_PG_BINARY = ctypes.pointer(ctypes.c_int.in_dll(
+        Parameters.librapidpg, 'RAPID_PG_BINARY'))
 
     class ConnStatusType(CtypesEnum):
         """ enum ConnStatusType """
