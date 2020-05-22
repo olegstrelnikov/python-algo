@@ -246,7 +246,7 @@ class Connection:
         return Result(Result.libpq.PQexecPrepared(
             self.pg_conn,
             statement.encode('utf-8'),
-            contents.size,
+            contents.current,
             contents.pointers,
             contents.lengths,
             Connection.RAPID_PG_BINARY,
