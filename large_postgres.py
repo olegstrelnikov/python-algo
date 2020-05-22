@@ -19,15 +19,14 @@ def generate_record(tlds, services, ip_addresses, hosts_num, base):
     hosts = [
         (tlds_num*(1 + 2*i),
          tlds_num*(2 + 2*i),
-         str(ipaddress.IPv4Address(
-            base + random.randrange(0, ip_addresses))),
+         base + random.randrange(0, ip_addresses),
          1 + (i % len(services)),
          ) for i in range(hosts_num//2)]
 
     for tld1 in range(tlds_num):
         for tld2 in range(tlds_num):
             for ip1 in range(ip_addresses):
-                str_ip1 = str(ipaddress.IPv4Address(base + ip1))
+                str_ip1 = base + ip1
                 for host1, host2, ip2, service in hosts:
                     yield (host1 + tld1, host2 + tld2, str_ip1, ip2,
                            service, random.uniform(0.0, 1000.0),
@@ -73,6 +72,20 @@ def generate_insert_values(records, columns):
     """Generate SQL script"""
     return ",".join("(" + ",".join("$"+str(i) for i in range(
         j*columns + 1, j*columns + columns + 1)) + ")" for j in range(records))
+
+
+def fill_in_parameters(parameters, records_at_once, gen):
+    """ fill in inserter parameters """
+    parameters.set_current(0)
+    for _ in range(records_at_once):
+        record = next(gen)
+        parameters.add_int(record[0])
+        parameters.add_int(record[1])
+        parameters.add_ip4_hbo(record[2])
+        parameters.add_ip4_hbo(record[3])
+        parameters.add_int(record[4])
+        parameters.add_double(record[5])
+        parameters.add_double(record[6])
 
 
 def test_database(host, user, password, database, records):
@@ -130,18 +143,23 @@ def test_database(host, user, password, database, records):
     assert res.has_result()
     assert res.status() == rapidpg.Result.ExecStatusType.PGRES_COMMAND_OK
 
+    now = time.monotonic()
+    res = conn.execute("BEGIN TRANSACTION")
+
+    assert res.has_result()
+    assert res.status() == rapidpg.Result.ExecStatusType.PGRES_COMMAND_OK
+
     ip_addresses = 2**24 - 2
     services = ("http", "smb", "cifs", "nfs", "scsi", "voip", "dns",
                 "dns", "https", "ftp", "iscsi", "amazon")
     tlds = ("com", "net", "org", "us", "ru")
 
     assert records <= ip_addresses*len(services)*len(tlds)*len(tlds)
-    gen = generate_values(tlds, services, ip_addresses, 100, 10*2**24 + 1)
-    now = time.monotonic()
+    gen = generate_record(tlds, services, ip_addresses, 100, 10*2**24 + 1)
+    parameters = rapidpg.Parameters()
     for _ in range(records // records_at_once):
-        res = conn.exec_prepared("EXECUTE inserter (" +
-                                 "%s, "*(7*records_at_once - 1) + "%s);",
-                                 [next(gen) for _ in range(7*records_at_once)])
+        fill_in_parameters(parameters, records_at_once, gen)
+        res = conn.exec_prepared("inserter", parameters)
     records_at_once = records % records_at_once
     if records_at_once > 0:
         res = conn.execute((
@@ -156,10 +174,13 @@ def test_database(host, user, password, database, records):
             )
         assert res.has_result()
         assert res.status() == rapidpg.Result.ExecStatusType.PGRES_COMMAND_OK
-        res = conn.exec_prepared("EXECUTE inserter (" +
-                                 "%s, "*(7*records_at_once - 1) + "%s);",
-                                 [next(gen) for _ in range(7*records_at_once)])
-    res = conn.execute("DEALLOCATE inserter;")
+        fill_in_parameters(parameters, records_at_once, gen)
+        res = conn.exec_prepared("inserter", parameters)
+        assert res.has_result()
+        assert res.status() == rapidpg.Result.ExecStatusType.PGRES_COMMAND_OK
+    res = conn.execute("DEALLOCATE inserter; COMMIT TRANSACTION")
+    assert res.has_result()
+    assert res.status() == rapidpg.Result.ExecStatusType.PGRES_COMMAND_OK
     print(records, "records inserted --- {:.3} seconds".format(
         time.monotonic() - now))
 
