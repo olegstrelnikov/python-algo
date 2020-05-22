@@ -3,7 +3,6 @@
 import random
 import string
 import time
-import ipaddress
 import rapidpg
 
 
@@ -13,79 +12,58 @@ def generate_host(length):
                    for _ in range(length))
 
 
-def generate_record(tlds, services, ip_addresses, hosts_num, base):
-    """Generate conversations db table record"""
-    tlds_num = len(tlds)
-    hosts = [
-        (tlds_num*(1 + 2*i),
-         tlds_num*(2 + 2*i),
-         base + random.randrange(0, ip_addresses),
-         1 + (i % len(services)),
-         ) for i in range(hosts_num//2)]
-
-    for tld1 in range(tlds_num):
-        for tld2 in range(tlds_num):
-            for ip1 in range(ip_addresses):
-                str_ip1 = base + ip1
-                for host1, host2, ip2, service in hosts:
-                    yield (host1 + tld1, host2 + tld2, str_ip1, ip2,
-                           service, random.uniform(0.0, 1000.0),
-                           random.uniform(0.0, 1000.0))
-
-
-def generate_values(tlds, services, ip_addresses, hosts_num, base):
-    """Generate conversations db table record"""
-    tlds_num = len(tlds)
-    hosts = [
-        (tlds_num*(1 + 2*i),
-         tlds_num*(2 + 2*i),
-         str(ipaddress.IPv4Address(
-            base + random.randrange(0, ip_addresses))),
-         1 + (i % len(services)),
-         ) for i in range(hosts_num//2)]
-
-    for tld1 in range(tlds_num):
-        for tld2 in range(tlds_num):
-            for ip1 in range(ip_addresses):
-                str_ip1 = str(ipaddress.IPv4Address(base + ip1))
-                for host1, host2, ip2, service in hosts:
-                    yield host1 + tld1
-                    yield host2 + tld2
-                    yield str_ip1
-                    yield ip2
-                    yield service
-                    yield random.uniform(0.0, 1000.0)
-                    yield random.uniform(0.0, 1000.0)
-
-
-def generate_table(rowcount, record):
-    """Generate rowcount table records"""
-    gen = generate_record(*record)
-    for _ in range(rowcount):
-        try:
-            yield next(gen)
-        except StopIteration:
-            return
-
-
 def generate_insert_values(records, columns):
     """Generate SQL script"""
     return ",".join("(" + ",".join("$"+str(i) for i in range(
         j*columns + 1, j*columns + columns + 1)) + ")" for j in range(records))
 
 
-def fill_in_parameters(parameters, records_at_once, gen):
+ip_addresses = 2**24 - 2
+services = ("http", "smb", "cifs", "nfs", "scsi", "voip", "dns",
+            "dns", "https", "ftp", "iscsi", "amazon")
+tlds = ("com", "net", "org", "us", "ru")
+
+tlds_num = len(tlds)
+host_num = 100
+base = 10*2**24 + 1
+ip_num = 2**24 - 2
+HOSTS = [
+    (tlds_num*(1 + 2*i),
+     tlds_num*(2 + 2*i),
+     base + random.randrange(0, ip_addresses),
+     1 + (i % len(services)),
+     random.uniform(0.0, 1000.0),
+     random.uniform(0.0, 1000.0)
+     ) for i in range(host_num//2)]
+
+
+def fill_in_parameters(parameters, i, to_i):
     """ fill in inserter parameters """
+    print(i, to_i, sep='-')
     parameters.set_current(0)
-    for _ in range(records_at_once):
-        record = next(gen)
-        parameters.add_int(record[0])
-        parameters.add_int(record[1])
-        parameters.add_ip4_hbo(record[2])
-        parameters.add_ip4_hbo(record[3])
-        parameters.add_int(record[4])
-        parameters.add_double(record[5])
-        parameters.add_double(record[6])
+    while i < to_i:
+        host = i % (host_num // 2)
+        fr = i // (host_num // 2)
+        t1 = fr // ip_num
+        t2 = t1 // tlds_num
+        parameters.add_int(HOSTS[host][0] + (t1 % tlds_num))
+        parameters.add_int(HOSTS[host][1] + (t2 % tlds_num))
+        parameters.add_ip4_hbo(base + fr % ip_num)
+        parameters.add_ip4_hbo(HOSTS[host][2])
+        parameters.add_int(HOSTS[host][3])
+        parameters.add_double(HOSTS[host][4])
+        parameters.add_double(HOSTS[host][5])
+        i += 1
+
+
+def add_records(conn, records, records_at_once, parameters):
+    """ todo """
+    i = records_at_once
+    while i < records:
+        parameters.set_current(0)
+        fill_in_parameters(parameters, i - records_at_once, i)
+        conn.exec_prepared("inserter", parameters)
+        i += records_at_once
 
 
 def test_database(host, user, password, database, records):
@@ -149,17 +127,9 @@ def test_database(host, user, password, database, records):
     assert res.has_result()
     assert res.status() == rapidpg.Result.ExecStatusType.PGRES_COMMAND_OK
 
-    ip_addresses = 2**24 - 2
-    services = ("http", "smb", "cifs", "nfs", "scsi", "voip", "dns",
-                "dns", "https", "ftp", "iscsi", "amazon")
-    tlds = ("com", "net", "org", "us", "ru")
-
     assert records <= ip_addresses*len(services)*len(tlds)*len(tlds)
-    gen = generate_record(tlds, services, ip_addresses, 100, 10*2**24 + 1)
     parameters = rapidpg.Parameters()
-    for _ in range(records // records_at_once):
-        fill_in_parameters(parameters, records_at_once, gen)
-        res = conn.exec_prepared("inserter", parameters)
+    add_records(conn, records, records_at_once, parameters)
     records_at_once = records % records_at_once
     if records_at_once > 0:
         res = conn.execute((
@@ -174,7 +144,7 @@ def test_database(host, user, password, database, records):
             )
         assert res.has_result()
         assert res.status() == rapidpg.Result.ExecStatusType.PGRES_COMMAND_OK
-        fill_in_parameters(parameters, records_at_once, gen)
+        fill_in_parameters(parameters, records - records_at_once, records)
         res = conn.exec_prepared("inserter", parameters)
         assert res.has_result()
         assert res.status() == rapidpg.Result.ExecStatusType.PGRES_COMMAND_OK
