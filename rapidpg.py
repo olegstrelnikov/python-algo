@@ -49,21 +49,21 @@ class Parameters:
     def __del__(self):
         Parameters.librapidpg.rapidpg_destroy_parameters(self.parameters)
 
-    def set_current(self):
+    def set_current(self, current):
         """ set current parameter """
-        Parameters.librapidpg.rapidpg_set_current(self.parameters)
+        Parameters.librapidpg.rapidpg_set_current(self.parameters, current)
 
-    def add_int(self):
+    def add_int(self, value):
         """ add int """
-        Parameters.librapidpg.rapidpg_add_int(self.parameters)
+        Parameters.librapidpg.rapidpg_add_int(self.parameters, value)
 
-    def add_double(self):
+    def add_double(self, value):
         """ add double """
-        Parameters.librapidpg.rapidpg_add_double(self.parameters)
+        Parameters.librapidpg.rapidpg_add_double(self.parameters, value)
 
-    def add_ip4_hbo(self):
+    def add_ip4_hbo(self, value):
         """ add IPv4 address """
-        Parameters.librapidpg.rapidpg_add_ip4_hbo(self.parameters)
+        Parameters.librapidpg.rapidpg_add_ip4_hbo(self.parameters, value)
 
 
 class CtypesEnum(IntEnum):
