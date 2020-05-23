@@ -18,36 +18,36 @@ def generate_insert_values(records, columns):
         j*columns + 1, j*columns + columns + 1)) + ")" for j in range(records))
 
 
-ip_addresses = 2**24 - 2
-services = ("http", "smb", "cifs", "nfs", "scsi", "voip", "dns",
+IP_ADDRESSES = 2**24 - 2
+SERVICES = ("http", "smb", "cifs", "nfs", "scsi", "voip", "dns",
             "dns", "https", "ftp", "iscsi", "amazon")
-tlds = ("com", "net", "org", "us", "ru")
+TLDS = ("com", "net", "org", "us", "ru")
 
-tlds_num = len(tlds)
-host_num = 100
-base = 10*2**24 + 1
-ip_num = 2**24 - 2
+NTLDS = len(TLDS)
+NHOSTS = 100
+IP_BASE = 10*2**24 + 1
+NIPS = 2**24 - 2
 HOSTS = [
-    (tlds_num*(1 + 2*i),
-     tlds_num*(2 + 2*i),
-     base + random.randrange(0, ip_addresses),
-     1 + (i % len(services)),
+    (NTLDS*(1 + 2*i),
+     NTLDS*(2 + 2*i),
+     IP_BASE + random.randrange(0, IP_ADDRESSES),
+     1 + (i % len(SERVICES)),
      random.uniform(0.0, 1000.0),
      random.uniform(0.0, 1000.0)
-     ) for i in range(host_num//2)]
+     ) for i in range(NHOSTS//2)]
 
 
 def fill_in_parameters(parameters, i, to_i):
     """ fill in inserter parameters """
     parameters.set_current(0)
     while i < to_i:
-        host = i % (host_num // 2)
-        fr = i // (host_num // 2)
-        t1 = fr // ip_num
-        t2 = t1 // tlds_num
-        parameters.add_int(HOSTS[host][0] + (t1 % tlds_num))
-        parameters.add_int(HOSTS[host][1] + (t2 % tlds_num))
-        parameters.add_ip4_hbo(base + fr % ip_num)
+        host = i % (NHOSTS // 2)
+        ip_from_index = i // (NHOSTS // 2)
+        host_from_index = ip_from_index // NIPS
+        host_to_index = host_from_index // NTLDS
+        parameters.add_int(HOSTS[host][0] + (host_from_index % NTLDS))
+        parameters.add_int(HOSTS[host][1] + (host_to_index % NTLDS))
+        parameters.add_ip4_hbo(IP_BASE + ip_from_index % NIPS)
         parameters.add_ip4_hbo(HOSTS[host][2])
         parameters.add_int(HOSTS[host][3])
         parameters.add_double(HOSTS[host][4])
@@ -126,7 +126,7 @@ def test_database(host, user, password, database, records):
     assert res.has_result()
     assert res.status() == rapidpg.Result.ExecStatusType.PGRES_COMMAND_OK
 
-    assert records <= ip_addresses*len(services)*len(tlds)*len(tlds)
+    assert records <= IP_ADDRESSES*len(SERVICES)*len(TLDS)*len(TLDS)
     parameters = rapidpg.Parameters()
     add_records(conn, records, records_at_once, parameters)
     records_at_once = records % records_at_once
